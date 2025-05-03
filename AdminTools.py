@@ -16,8 +16,9 @@ from PIL import Image
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(name)s] %(levelname)s - %(message)s")
 logger: logging = logging.getLogger(f"Main")
 
+
 def handle_login():
-    global app, server, client
+    global app, server, client, user_login_id
     app.login_button.configure(state="disabled")
     email = app.username_login_entry.get()
     password = app.password_login_entry.get()
@@ -35,9 +36,9 @@ def handle_login():
             return
 
         def update_ui():
+            global user_login_id
             if result != None:
-                server.id = result['id']
-                print(server.id)
+                user_login_id = result['id']
                 app.user_name_label.configure(text=result['name'])
                 app.show_home_page()
             else:
@@ -101,38 +102,54 @@ def insert_item_manage_user():
     
     search = app.manage_users_search_entry.get()
     searchradio = app.search_users_radio_var.get()
-    # users = server.select_all_users(search,searchradio)
-    users = client.loadusers(search,searchradio)
 
-    # for i, user in enumerate(users):
-    #     row_frame = customtkinter.CTkFrame(manage_scrollable_frame, height=40, corner_radius=10, fg_color="#2f2f2f")
-    #     row_frame.pack(fill="x", expand=True, pady=(10 if i == 0 else 2, 2), padx=5)
-    #     row_frame.grid_columnconfigure(0, weight=1)
+    result = client.loadusers(search,searchradio)
+    message = client.message
 
-    #     uid_label = customtkinter.CTkLabel(row_frame, text=user['uid'], font=customtkinter.CTkFont(size=12))
-    #     uid_label.grid(row=0, column=0, padx=(10, 5), sticky="w")
-    #     name_label = customtkinter.CTkLabel(row_frame, text=user['name'], font=customtkinter.CTkFont(size=12))
-    #     name_label.grid(row=0, column=1, padx=(10, 5), sticky="w")
-    #     credit_label = customtkinter.CTkLabel(row_frame, text=f"Credit {user['credit']}", font=customtkinter.CTkFont(size=12))
-    #     credit_label.grid(row=0, column=2, padx=(5, 5))
-        
-    #     enable_label = customtkinter.CTkLabel(
-    #         row_frame,
-    #         text=f"Enabled" if user["enable"] else "Disabled",
-    #         text_color="Green" if user["enable"] else "Orange",
-    #         font=customtkinter.CTkFont(size=12))
-    #     enable_label.grid(row=0, column=3, padx=(5, 5))
+    if result != None:
+        try:
+            for i, user in enumerate(result):
+                row_frame = customtkinter.CTkFrame(manage_scrollable_frame, height=40, corner_radius=10, fg_color="#2f2f2f")
+                row_frame.pack(fill="x", expand=True, pady=(10 if i == 0 else 2, 2), padx=5)
+                row_frame.grid_columnconfigure(0, weight=1)
 
-    #     blacklist_label = customtkinter.CTkLabel(
-    #         row_frame,
-    #         text=f"Blacklist" if user["blacklist"] else "Normal",
-    #         text_color="Red" if user["blacklist"] else "Green",
-    #         font=customtkinter.CTkFont(size=12))
-    #     blacklist_label.grid(row=0, column=4, padx=(5, 5))
+                uid_label = customtkinter.CTkLabel(row_frame, text=user['uid'], font=customtkinter.CTkFont(size=12))
+                uid_label.grid(row=0, column=0, padx=(10, 5), sticky="w")
+                name_label = customtkinter.CTkLabel(row_frame, text=user['name'], font=customtkinter.CTkFont(size=12))
+                name_label.grid(row=0, column=1, padx=(10, 5), sticky="w")
+                credit_label = customtkinter.CTkLabel(row_frame, text=f"Credit {user['credit']}", font=customtkinter.CTkFont(size=12))
+                credit_label.grid(row=0, column=2, padx=(5, 5))
+                
+                enable_label = customtkinter.CTkLabel(
+                    row_frame,
+                    text=f"Enabled" if user["enable"] else "Disabled",
+                    text_color="Green" if user["enable"] else "Orange",
+                    font=customtkinter.CTkFont(size=12))
+                enable_label.grid(row=0, column=3, padx=(5, 5))
 
-    #     button_manage = customtkinter.CTkButton(row_frame, text="Manage", width=50,  font=customtkinter.CTkFont(weight="bold"))
-    #     button_manage.configure(command=lambda DATA=user : button_manage_event(DATA))
-    #     button_manage.grid(row=0, column=5, padx=(5, 5), pady=5)
+                blacklist_label = customtkinter.CTkLabel(
+                    row_frame,
+                    text=f"Blacklist" if user["blacklist"] else "Normal",
+                    text_color="Red" if user["blacklist"] else "Green",
+                    font=customtkinter.CTkFont(size=12))
+                blacklist_label.grid(row=0, column=4, padx=(5, 5))
+
+                button_manage = customtkinter.CTkButton(row_frame, text="Manage", width=50,  font=customtkinter.CTkFont(weight="bold"))
+                button_manage.configure(command=lambda DATA=user : button_manage_event(DATA))
+                button_manage.grid(row=0, column=5, padx=(5, 5), pady=5)
+
+        except Exception as e:
+            messagebox.showerror("insert item manage users", f"An error occurred: {e}")
+            app.after(0, lambda: app.login_button.configure(state="normal"))
+            return
+    else:
+        messagebox.showerror("Insert user item failed", message)
+    
+
+
+    
+
+
 
 def handle_history():
     global app  
@@ -218,18 +235,19 @@ def button_manage_event(data):
         
     app.show_from_manage()
 
-def update_user(id,default_credit):
-    global server, app
+def update_user(userid,default_credit):
+    global client, app, user_login_id
+
     name = app.fmu_name_entry.get()
     enable = True if app.account_status_var.get() == 'enable' else False
     blacklist = True if app.account_blacklist_var.get() == 'enable' else False
 
-    server.update_user(name,enable,blacklist,id)
+    client.updateuser(id=userid, updateby=user_login_id, data={'name': name, 'enable': enable, 'blacklist': blacklist})
 
     credit = float(app.fmu_credit_entry.get())
     default_credit = float(default_credit)
     if default_credit != credit:
-        server.update_credit(id,credit)
+        client.updatecredit(userid=userid, updateby=user_login_id, value=credit)
     
     app.show_manage()
     insert_item_manage_user()
@@ -237,6 +255,7 @@ def update_user(id,default_credit):
 if __name__ == "__main__":
     manage_scrollable_frame = None
     history_scrollable_frame = None
+    user_login_id = None
 
     server = Server()
     connect = server.connect()

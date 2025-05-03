@@ -1,4 +1,3 @@
-import threading
 import requests
 import logging
 import base64
@@ -41,7 +40,7 @@ class Client:
     
     def loadslipsbase64(self, path):
         try:
-            url = f"{self.host}/loadslips"
+            url = f"{self.host}/slips"
             payload = {"path": path}
             response = requests.post(url, json=payload)
             if response:
@@ -77,21 +76,14 @@ class Client:
     
     def loadusers(self, search, searchby=None):
         try:
-            url = f"{self.host}/loadusers"
+            url = f"{self.host}/users"
             params = {"search": search}
             if searchby is not None:
                 params["searchby"] = searchby
-
             response = requests.get(url, params=params)
             response.raise_for_status()
-
             result = response.json()
-            if result.get("success"):
-                print(result.get("users"))
-                return result.get("users")
-            else:
-                self.message = result.get("message", "Unknown error")
-                return
+            return result
         except requests.exceptions.RequestException as e:
             self.message = f"Request failed: {e}"
             self.__logger.error(self.message)
@@ -100,8 +92,80 @@ class Client:
             self.message = f"Unexpected error: {e}"
             self.__logger.error(self.message)
             return
-
         
+    def updateuser(self, id, updateby, data):
+        try:
+            url = f"{self.host}/users"
+            payload = data.copy()
+            payload['id'] = id
+            payload['updateby'] = updateby
+
+            response = requests.patch(url, json=payload)
+            response.raise_for_status()
+            return response.json()
+
+        except requests.exceptions.HTTPError as e:
+            try:
+                error_response = response.json()
+                error_msg = error_response.get('error', 'Unknown error')
+                error_details = error_response.get('details', '')
+                self.message = (
+                    f"Server error / ข้อผิดพลาดจากเซิร์ฟเวอร์: {error_msg} - {error_details}"
+                )
+            except Exception:
+                self.message = (
+                    f"HTTP error occurred / เกิดข้อผิดพลาด HTTP: {e} (ไม่มีรายละเอียด JSON)"
+                )
+            self.__logger.error(self.message)
+            return
+
+        except requests.exceptions.RequestException as e:
+            self.message = f"Connection error / ข้อผิดพลาดการเชื่อมต่อ: {e}"
+            self.__logger.error(self.message)
+            return
+
+        except Exception as e:
+            self.message = f"Unexpected error / ข้อผิดพลาดที่ไม่คาดคิด: {e}"
+            self.__logger.error(self.message)
+            return
+
+
+    def updatecredit(self, userid, updateby, value):
+        try:
+            url = f"{self.host}/credit"
+            payload = {'userid': userid, 'updateby': updateby, 'credit': value}
+
+            response = requests.put(url, json=payload)
+            response.raise_for_status()
+            return response.json()
+
+        except requests.exceptions.HTTPError as e:
+            try:
+                error_response = response.json()
+                error_msg = error_response.get('error', 'Unknown error')
+                error_details = error_response.get('details', '')
+                self.message = (
+                    f"Server error / ข้อผิดพลาดจากเซิร์ฟเวอร์: {error_msg} - {error_details}"
+                )
+            except Exception:
+                self.message = (
+                    f"HTTP error occurred / เกิดข้อผิดพลาด HTTP: {str(e)}"
+                )
+            self.__logger.error(self.message)
+            return
+
+        except requests.exceptions.RequestException as e:
+            self.message = f"Request failed / การร้องขอล้มเหลว: {e}"
+            self.__logger.error(self.message)
+            return
+
+        except Exception as e:
+            self.message = f"Unexpected error / ข้อผิดพลาดที่ไม่คาดคิด: {e}"
+            self.__logger.error(self.message)
+            return
+
+
+
     def __verify_token(self,token:str) -> dict:
         try:
             url = f"{self.host}/verify"
