@@ -1,36 +1,20 @@
-import firebase_admin
-from firebase_admin import credentials, auth, firestore
+from firebase_admin import auth
 from datetime import datetime
-from Lib.ui import App
-from Lib.sqlserver import Server
+from ui import App
+from sqlserver import Server
 import re
-import pyodbc
-import json
 from tkinter import messagebox
 import logging
 import customtkinter
 import threading
-from Lib.client import Client
+from client import Client
 from pathlib import Path
 from PIL import Image
-import sys
-import os
 
 # pyinstaller --onefile --add-data "serviceAccountKey.json;." --add-data "server.json;." --noconsole --add-data "Lib/ui/images/untitled.png;images" --add-data "Lib/ui/icons/icon.ico;Lib/ui/icons" --icon="Lib\ui\icons\icon.ico" AdminTools.py
 
-
-
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(name)s] %(levelname)s - %(message)s")
 logger: logging = logging.getLogger(f"Main")
-
-if hasattr(sys, "_MEIPASS"):
-    serviceaccountkey_path = os.path.join(sys._MEIPASS, "serviceAccountKey.json")
-else:
-    serviceaccountkey_path = "serviceAccountKey.json"
-
-cred = credentials.Certificate(serviceaccountkey_path)
-firebase_admin.initialize_app(cred)
-db = firestore.client()
 
 def handle_login():
     global app, server, client
@@ -106,7 +90,7 @@ def handle_manage_user():
     insert_item_manage_user()
 
 def insert_item_manage_user():
-    global app, server, manage_scrollable_frame
+    global app, client, manage_scrollable_frame
 
     if manage_scrollable_frame != None:
         manage_scrollable_frame.destroy()
@@ -117,37 +101,38 @@ def insert_item_manage_user():
     
     search = app.manage_users_search_entry.get()
     searchradio = app.search_users_radio_var.get()
-    users = server.select_all_users(search,searchradio)
-    
-    for i, user in enumerate(users):
-        row_frame = customtkinter.CTkFrame(manage_scrollable_frame, height=40, corner_radius=10, fg_color="#2f2f2f")
-        row_frame.pack(fill="x", expand=True, pady=(10 if i == 0 else 2, 2), padx=5)
-        row_frame.grid_columnconfigure(0, weight=1)
+    # users = server.select_all_users(search,searchradio)
+    users = client.loadusers(search,searchradio)
 
-        uid_label = customtkinter.CTkLabel(row_frame, text=user['uid'], font=customtkinter.CTkFont(size=12))
-        uid_label.grid(row=0, column=0, padx=(10, 5), sticky="w")
-        name_label = customtkinter.CTkLabel(row_frame, text=user['name'], font=customtkinter.CTkFont(size=12))
-        name_label.grid(row=0, column=1, padx=(10, 5), sticky="w")
-        credit_label = customtkinter.CTkLabel(row_frame, text=f"Credit {user['credit']}", font=customtkinter.CTkFont(size=12))
-        credit_label.grid(row=0, column=2, padx=(5, 5))
+    # for i, user in enumerate(users):
+    #     row_frame = customtkinter.CTkFrame(manage_scrollable_frame, height=40, corner_radius=10, fg_color="#2f2f2f")
+    #     row_frame.pack(fill="x", expand=True, pady=(10 if i == 0 else 2, 2), padx=5)
+    #     row_frame.grid_columnconfigure(0, weight=1)
+
+    #     uid_label = customtkinter.CTkLabel(row_frame, text=user['uid'], font=customtkinter.CTkFont(size=12))
+    #     uid_label.grid(row=0, column=0, padx=(10, 5), sticky="w")
+    #     name_label = customtkinter.CTkLabel(row_frame, text=user['name'], font=customtkinter.CTkFont(size=12))
+    #     name_label.grid(row=0, column=1, padx=(10, 5), sticky="w")
+    #     credit_label = customtkinter.CTkLabel(row_frame, text=f"Credit {user['credit']}", font=customtkinter.CTkFont(size=12))
+    #     credit_label.grid(row=0, column=2, padx=(5, 5))
         
-        enable_label = customtkinter.CTkLabel(
-            row_frame,
-            text=f"Enabled" if user["enable"] else "Disabled",
-            text_color="Green" if user["enable"] else "Orange",
-            font=customtkinter.CTkFont(size=12))
-        enable_label.grid(row=0, column=3, padx=(5, 5))
+    #     enable_label = customtkinter.CTkLabel(
+    #         row_frame,
+    #         text=f"Enabled" if user["enable"] else "Disabled",
+    #         text_color="Green" if user["enable"] else "Orange",
+    #         font=customtkinter.CTkFont(size=12))
+    #     enable_label.grid(row=0, column=3, padx=(5, 5))
 
-        blacklist_label = customtkinter.CTkLabel(
-            row_frame,
-            text=f"Blacklist" if user["blacklist"] else "Normal",
-            text_color="Red" if user["blacklist"] else "Green",
-            font=customtkinter.CTkFont(size=12))
-        blacklist_label.grid(row=0, column=4, padx=(5, 5))
+    #     blacklist_label = customtkinter.CTkLabel(
+    #         row_frame,
+    #         text=f"Blacklist" if user["blacklist"] else "Normal",
+    #         text_color="Red" if user["blacklist"] else "Green",
+    #         font=customtkinter.CTkFont(size=12))
+    #     blacklist_label.grid(row=0, column=4, padx=(5, 5))
 
-        button_manage = customtkinter.CTkButton(row_frame, text="Manage", width=50,  font=customtkinter.CTkFont(weight="bold"))
-        button_manage.configure(command=lambda DATA=user : button_manage_event(DATA))
-        button_manage.grid(row=0, column=5, padx=(5, 5), pady=5)
+    #     button_manage = customtkinter.CTkButton(row_frame, text="Manage", width=50,  font=customtkinter.CTkFont(weight="bold"))
+    #     button_manage.configure(command=lambda DATA=user : button_manage_event(DATA))
+    #     button_manage.grid(row=0, column=5, padx=(5, 5), pady=5)
 
 def handle_history():
     global app  
@@ -249,43 +234,30 @@ def update_user(id,default_credit):
     app.show_manage()
     insert_item_manage_user()
 
-def load_server_json_file():
-    global config
-    try:
-        if hasattr(sys, "_MEIPASS"):
-            serverjson_path = os.path.join(sys._MEIPASS, "server.json")
-        else:
-            serverjson_path = "server.json"
-        with open(serverjson_path, 'r') as file:
-            config = json.load(file)
-        return config
-    except Exception as e:
-        messagebox.showerror("Error", f"{e}")
-        return
-
 if __name__ == "__main__":
     manage_scrollable_frame = None
     history_scrollable_frame = None
-    config = load_server_json_file()
-    if config:
-        server = Server(config)
-        connect = server.connect()
-        if connect:
-            app = App()
-            client = Client()
-            app.login_button.configure(command=lambda: handle_login())
-            app.button_register.configure(command=lambda: handle_register())
-            app.button_manage_user.configure(command=lambda: handle_manage_user())
-            app.button_search_users.configure(command=lambda: handle_manage_user())
-            app.button_history.configure(command=lambda: handle_history())
-            app.button_search_history.configure(command=lambda: handle_history())
 
-            app.username_login_entry.insert(0, "jadesadaphon.chaykaew@gmail.com")
-            app.password_login_entry.insert(0, "admin@1234")
+    server = Server()
+    connect = server.connect()
+    if connect:
+        app = App()
+        client = Client()
+        app.login_button.configure(command=lambda: handle_login())
+        app.button_register.configure(command=lambda: handle_register())
+        app.button_manage_user.configure(command=lambda: handle_manage_user())
+        app.button_search_users.configure(command=lambda: handle_manage_user())
+        app.button_history.configure(command=lambda: handle_history())
+        app.button_search_history.configure(command=lambda: handle_history())
+
+        app.username_login_entry.insert(0, "jadesadaphon.chaykaew@gmail.com")
+        app.password_login_entry.insert(0, "admin@1234")
            
 
-            app.show_login_page()
-            app.mainloop()
+        app.show_login_page()
+        app.mainloop()
+
+        
     
     
     
