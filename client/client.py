@@ -74,7 +74,7 @@ class Client:
             self.__logger.error(self.message)
             return
     
-    def loadusers(self, search, searchby=None):
+    def loadUsers(self, search, searchby=None):
         try:
             url = f"{self.host}/users"
             params = {"search": search}
@@ -93,7 +93,7 @@ class Client:
             self.__logger.error(self.message)
             return
         
-    def updateuser(self, id, updateby, data):
+    def updateUser(self, id, updateby, data):
         try:
             url = f"{self.host}/users"
             payload = data.copy()
@@ -129,8 +129,7 @@ class Client:
             self.__logger.error(self.message)
             return
 
-
-    def updatecredit(self, userid, updateby, value):
+    def updateCredit(self, userid, updateby, value):
         try:
             url = f"{self.host}/credit"
             payload = {'userid': userid, 'updateby': updateby, 'credit': value}
@@ -163,8 +162,6 @@ class Client:
             self.message = f"Unexpected error / ข้อผิดพลาดที่ไม่คาดคิด: {e}"
             self.__logger.error(self.message)
             return
-
-
 
     def __verify_token(self,token:str) -> dict:
         try:

@@ -103,7 +103,7 @@ def insert_item_manage_user():
     search = app.manage_users_search_entry.get()
     searchradio = app.search_users_radio_var.get()
 
-    result = client.loadusers(search,searchradio)
+    result = client.loadUsers(search,searchradio)
     message = client.message
 
     if result != None:
@@ -242,12 +242,12 @@ def update_user(userid,default_credit):
     enable = True if app.account_status_var.get() == 'enable' else False
     blacklist = True if app.account_blacklist_var.get() == 'enable' else False
 
-    client.updateuser(id=userid, updateby=user_login_id, data={'name': name, 'enable': enable, 'blacklist': blacklist})
+    client.updateUser(id=userid, updateby=user_login_id, data={'name': name, 'enable': enable, 'blacklist': blacklist})
 
     credit = float(app.fmu_credit_entry.get())
     default_credit = float(default_credit)
     if default_credit != credit:
-        client.updatecredit(userid=userid, updateby=user_login_id, value=credit)
+        client.updateCredit(userid=userid, updateby=user_login_id, value=credit)
     
     app.show_manage()
     insert_item_manage_user()
