@@ -1,7 +1,5 @@
-from firebase_admin import auth
 from datetime import datetime
 from ui import App
-from sqlserver import Server
 import re
 from tkinter import messagebox
 import logging
@@ -18,7 +16,7 @@ logger: logging = logging.getLogger(f"Main")
 
 
 def handle_login():
-    global app, server, client, user_login_id
+    global app, client, user_login_id
     app.login_button.configure(state="disabled")
     email = app.username_login_entry.get()
     password = app.password_login_entry.get()
@@ -50,7 +48,8 @@ def handle_login():
     threading.Thread(target=login_task, daemon=True).start()
 
 def handle_register():
-    global app, server
+    global app, client, user_login_id
+
     app.button_register.configure(state="disabled")
     name = app.name_entry.get()
     email = app.email_entry.get()
@@ -58,29 +57,31 @@ def handle_register():
     confirm_password = app.confirm_password_entry.get()
 
     if not email or not password or not confirm_password:
-        app.messagebox.showerror("Error", "All fields are required. Please fill out all fields.")
+        app.messagebox.showwarning("Warning", "All fields are required. Please fill out all fields.")
         app.button_register.configure(state="normal")
         return
 
     if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-        app.messagebox.showerror("Error", "Invalid email format. Please enter a valid email address.")
+        app.messagebox.showwarning("Warning", "Invalid email format. Please enter a valid email address.")
         app.button_register.configure(state="normal")
         return
 
     if password != confirm_password:
-        app.messagebox.showerror("Error", "Passwords do not match. Please re-enter your password.")
+        app.messagebox.showwarning("Warning", "Passwords do not match. Please re-enter your password.")
         app.button_register.configure(state="normal")
         return
 
     try:
-        user = auth.create_user(email=email, password=password)
-        logging.info("Firebase User successfully added.")
-        server.insert_new_user(user.uid,name)
-        
-        app.messagebox.showinfo("Success", f"Registration successful!\nFirebase UID: {user.uid}")
+        result = client.registerUser(name=name, email=email, password=password, user_created=user_login_id)
+
+        if(not result.get("success")):
+            app.messagebox.showerror("Error", str(result.get("message")))
+        else:
+            app.messagebox.showinfo("Info", str(result.get("message")))
+
         app.button_register.configure(state="normal")
-        
         app.clear_form_register()
+
     except Exception as e:
         app.messagebox.showerror("Error", f"Error creating user: {e}")
         app.button_register.configure(state="normal")
@@ -146,18 +147,13 @@ def insert_item_manage_user():
         messagebox.showerror("Insert user item failed", message)
     
 
-
-    
-
-
-
 def handle_history():
     global app  
     app.show_history()
     insert_item_history()
 
 def insert_item_history():
-    global app, server, history_scrollable_frame
+    global app, history_scrollable_frame
 
     if history_scrollable_frame != None:
         history_scrollable_frame.destroy()
@@ -174,10 +170,11 @@ def insert_item_history():
     searchby = app.search_history_radio_var.get()
     
     if app.search_checkbox_var.get() == 'on':
-        historys = server.select_all_history(search,searchby=searchby)
+        historys = client.updateHistory(search=search,searchby=searchby)
+        # historys = server.select_all_history(search,searchby=searchby)
     else:
-        historys = server.select_all_history(search,date=searchdate,searchby=searchby)
-
+        historys = client.updateHistory(search=search,date=searchdate,searchby=searchby)
+        # historys = server.select_all_history(search,date=searchdate,searchby=searchby)
 
     for i, history in enumerate(historys):
         row_frame = customtkinter.CTkFrame(history_scrollable_frame, height=40, corner_radius=10, fg_color="#2f2f2f")
@@ -257,24 +254,20 @@ if __name__ == "__main__":
     history_scrollable_frame = None
     user_login_id = None
 
-    server = Server()
-    connect = server.connect()
-    if connect:
-        app = App()
-        client = Client()
-        app.login_button.configure(command=lambda: handle_login())
-        app.button_register.configure(command=lambda: handle_register())
-        app.button_manage_user.configure(command=lambda: handle_manage_user())
-        app.button_search_users.configure(command=lambda: handle_manage_user())
-        app.button_history.configure(command=lambda: handle_history())
-        app.button_search_history.configure(command=lambda: handle_history())
+    app = App()
+    client = Client()
 
-        app.username_login_entry.insert(0, "jadesadaphon.chaykaew@gmail.com")
-        app.password_login_entry.insert(0, "admin@1234")
+    app.login_button.configure(command=lambda: handle_login())
+    app.button_register.configure(command=lambda: handle_register())
+    app.button_manage_user.configure(command=lambda: handle_manage_user())
+    app.button_search_users.configure(command=lambda: handle_manage_user())
+    app.button_history.configure(command=lambda: handle_history())
+    app.button_search_history.configure(command=lambda: handle_history())
+    app.username_login_entry.insert(0, "jadesadaphon.chaykaew@gmail.com")
+    app.password_login_entry.insert(0, "admin@1234")
            
-
-        app.show_login_page()
-        app.mainloop()
+    app.show_login_page()
+    app.mainloop()
 
         
     

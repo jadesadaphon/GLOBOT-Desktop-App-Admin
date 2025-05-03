@@ -1,8 +1,6 @@
 from dotenv import load_dotenv
-import pyodbc
 import os
 import logging
-from tkinter import messagebox
 
 logging.basicConfig(
     level=logging.INFO, format="[%(asctime)s] [%(name)s] %(levelname)s - %(message)s"
@@ -22,30 +20,19 @@ class Server:
         self.__logger: logging = logging.getLogger(f"SQL-Server")
 
     def connect(self):
-        try:
-            self.__connection = pyodbc.connect(
-                f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={self.__server};DATABASE={self.__database};UID={self.__username};PWD={self.__password}"
-            )
-            self.__cursor = self.__connection.cursor()
-            self.__logger.info("Connected successfully.")
-            return True
-        except pyodbc.Error as e:
-            messagebox.showerror("Error", f"{e}")
-            return False
-
-    def insert_new_user(self, uid, name):
-        try:
-            sql = """INSERT INTO users (uid, name, createdby, updateby) VALUES (?, ?, ?, ?)"""
-            self.__cursor.execute(sql, uid, name,  self.id, self.id)
-            self.__connection.commit()
-            self.__logger.info("User inserted successfully.")
-            return True
-        except pyodbc.Error as e:
-            messagebox.showerror("Error", f"{e}")
-            return False
+        # try:
+        #     self.__connection = pyodbc.connect(
+        #         f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={self.__server};DATABASE={self.__database};UID={self.__username};PWD={self.__password}"
+        #     )
+        #     self.__cursor = self.__connection.cursor()
+        #     self.__logger.info("Connected successfully.")
+        #     return True
+        # except pyodbc.Error as e:
+        #     messagebox.showerror("Error", f"{e}")
+        #     return False
+        pass
 
     def select_all_history(self,search,date=None,searchby=None):
-        try:
             if date != None:
                 if searchby == "name":
                     sql = """SELECT glohistory.userid,
@@ -94,9 +81,7 @@ class Server:
             result = [dict(zip(columns, row)) for row in self.__cursor.fetchall()] 
             self.__logger.info("Select all history successfully.")
             return result
-        except pyodbc.Error as e:
-            messagebox.showerror("Error", f"{e}")
-            return None
+        
     
 
 

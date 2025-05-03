@@ -74,6 +74,39 @@ class Client:
             self.__logger.error(self.message)
             return
     
+    def registerUser(self, name, email, password, user_created):
+        try:
+            
+            url = f"{self.host}/users"
+            payload = {
+                "name": name,
+                "email": email,
+                "password": password,
+                "createduser": user_created
+            }
+            response = requests.post(url, json=payload)
+            response.raise_for_status()
+            result = response.json()
+            return result
+        
+        except requests.exceptions.HTTPError as e:
+
+            try:
+                error_response = e.response.json()
+                message = f"HTTP error occurred: {error_response.get('error')} - {error_response.get('details')}"
+            except Exception:
+                message = f"HTTP error occurred: {e}"
+
+            return {"success": False, "message": message}
+        
+        except requests.exceptions.RequestException as e:
+            message = f"Request failed: {e}"
+            return {"success": False, "message": message}
+        
+        except Exception as e:
+            message = f"Unexpected error: {e}"
+            return {"success": False, "message": message}
+
     def loadUsers(self, search, searchby=None):
         try:
             url = f"{self.host}/users"
@@ -162,6 +195,9 @@ class Client:
             self.message = f"Unexpected error / ข้อผิดพลาดที่ไม่คาดคิด: {e}"
             self.__logger.error(self.message)
             return
+
+    def updateHistory(self,search,date=None,searchby=None):
+        pass
 
     def __verify_token(self,token:str) -> dict:
         try:
