@@ -171,10 +171,8 @@ def insert_item_history():
     
     if app.search_checkbox_var.get() == 'on':
         historys = client.updateHistory(search=search,searchby=searchby)
-        # historys = server.select_all_history(search,searchby=searchby)
     else:
         historys = client.updateHistory(search=search,date=searchdate,searchby=searchby)
-        # historys = server.select_all_history(search,date=searchdate,searchby=searchby)
 
     for i, history in enumerate(historys):
         row_frame = customtkinter.CTkFrame(history_scrollable_frame, height=40, corner_radius=10, fg_color="#2f2f2f")

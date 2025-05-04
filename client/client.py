@@ -197,7 +197,45 @@ class Client:
             return
 
     def updateHistory(self,search,date=None,searchby=None):
-        pass
+        try:
+            url = f"{self.host}/history"
+            params = {"search": search}
+
+            if searchby is not None:
+                params["searchby"] = searchby
+
+            if date is not None:
+                params["date"] = date
+
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            result = response.json()
+            return result
+        
+        except requests.exceptions.HTTPError as e:
+            try:
+                error_response = response.json()
+                error_msg = error_response.get('error', 'Unknown error')
+                error_details = error_response.get('details', '')
+                self.message = (
+                    f"Server error / ข้อผิดพลาดจากเซิร์ฟเวอร์: {error_msg} - {error_details}"
+                )
+            except Exception:
+                self.message = (
+                    f"HTTP error occurred / เกิดข้อผิดพลาด HTTP: {e} (ไม่มีรายละเอียด JSON)"
+                )
+            self.__logger.error(self.message)
+            return
+
+        except requests.exceptions.RequestException as e:
+            self.message = f"Connection error / ข้อผิดพลาดการเชื่อมต่อ: {e}"
+            self.__logger.error(self.message)
+            return
+
+        except Exception as e:
+            self.message = f"Unexpected error / ข้อผิดพลาดที่ไม่คาดคิด: {e}"
+            self.__logger.error(self.message)
+            return
 
     def __verify_token(self,token:str) -> dict:
         try:
